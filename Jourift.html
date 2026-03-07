@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Jourift</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/animejs/3.2.1/anime.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.5.1/dist/confetti.browser.min.js"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Poppins:wght@300;600&display=swap"
+        rel="stylesheet">
+
+    <style>
+        :root {
+            --bg-color: #0a0a0a;
+            --heart-color: #ff0a54;
+            --text-color: #ffffff;
+            --btn-shadow: 0 0 20px rgba(255, 10, 84, 0.4);
+        }
+
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Poppins', sans-serif;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            touch-action: none;
+        }
+
+        #canvas-stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            z-index: 1;
+        }
+
+        .content-wrapper {
+            position: relative;
+            z-index: 10;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.03);
+            backdrop-filter: blur(20px);
+            padding: 3rem 1.5rem;
+            border-radius: 30px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            width: 85%;
+            max-width: 450px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+
+        h1 {
+            font-family: 'Dancing Script', cursive;
+            font-size: clamp(2.2rem, 7vw, 3.5rem);
+            margin-bottom: 2.5rem;
+            background: linear-gradient(to right, #ff4d6d, #ffb3c1);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .btn-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 20px;
+            height: 100px;
+            position: relative;
+        }
+
+        .btn {
+            padding: 12px 35px;
+            border-radius: 50px;
+            border: none;
+            font-size: 1.1rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.3s;
+            min-width: 110px;
+        }
+
+        #yesBtn {
+            background: linear-gradient(45deg, #ff0a54, #ff4d6d);
+            color: white;
+            box-shadow: var(--btn-shadow);
+            z-index: 11;
+        }
+
+        #noBtn {
+            background: rgba(255, 255, 255, 0.08);
+            color: white;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            position: absolute;
+            z-index: 12;
+            right: 15%;
+        }
+
+        #heart-screen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 100;
+            background: radial-gradient(circle, #1a0005 0%, #000 100%);
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+
+        svg {
+            width: 60%;
+            max-width: 300px;
+            filter: drop-shadow(0 0 25px var(--heart-color));
+            margin-bottom: 20px;
+        }
+
+        .path {
+            stroke-dasharray: 1000;
+            stroke-dashoffset: 1000;
+            stroke: var(--heart-color);
+            stroke-width: 1.5;
+            fill: none;
+        }
+
+        .final-msg {
+            font-family: 'Dancing Script', cursive;
+            font-size: clamp(1.8rem, 6vw, 3rem);
+            color: white;
+            margin-top: 0.5rem;
+            text-shadow: 0 0 20px rgba(255, 10, 84, 0.6);
+            min-height: 1.2em;
+
+        }
+    </style>
+</head>
+
+<body>
+
+    <canvas id="canvas-stars"></canvas>
+
+    <audio id="loveSong">
+        <source src="song.mp3" type="audio/mpeg">
+    </audio>
+
+    <div class="content-wrapper" id="question-box">
+        <h1>Do you love me?</h1>
+        <div class="btn-container" id="area">
+            <button class="btn" id="yesBtn">Yes 🥰</button>
+            <button class="btn" id="noBtn">No 😔</button>
+        </div>
+    </div>
+
+    <div id="heart-screen">
+        <svg viewBox="0 0 100 100">
+            <path class="path" d="M50,30 C35,10 10,25 10,45 C10,70 50,90 50,90 C50,90 90,70 90,45 C90,25 65,10 50,30" />
+        </svg>
+        <div class="final-msg" id="msg1"></div>
+        <div class="final-msg" id="msg2"></div>
+        <div class="final-msg" id="msg3"></div>
+    </div>
+
+    <script>
+
+        const canvas = document.getElementById('canvas-stars');
+        const ctx = canvas.getContext('2d');
+        let stars = [];
+        let mouse = { x: -1000, y: -1000 };
+
+        function initStars() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            stars = [];
+            for (let i = 0; i < 150; i++) {
+                stars.push({
+                    x: Math.random() * canvas.width,
+                    y: Math.random() * canvas.height,
+                    originX: 0, originY: 0,
+                    size: Math.random() * 1.5,
+                    speed: Math.random() * 0.3
+                });
+            }
+        }
+
+        function drawStars() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = "#fff";
+            stars.forEach(s => {
+
+                let dx = mouse.x - s.x;
+                let dy = mouse.y - s.y;
+                let distance = Math.sqrt(dx * dx + dy * dy);
+                let force = (100 - distance) / 100;
+
+                if (distance < 100) {
+                    s.x -= dx * force * 0.03;
+                    s.y -= dy * force * 0.03;
+                }
+
+                ctx.beginPath();
+                ctx.arc(s.x, s.y, s.size, 0, Math.PI * 2);
+                ctx.fill();
+
+                s.y += s.speed;
+                if (s.y > canvas.height) s.y = 0;
+            });
+            requestAnimationFrame(drawStars);
+        }
+
+        window.addEventListener('mousemove', (e) => { mouse.x = e.clientX; mouse.y = e.clientY; });
+        window.addEventListener('touchmove', (e) => {
+            mouse.x = e.touches[0].clientX;
+            mouse.y = e.touches[0].clientY;
+        });
+        window.addEventListener('resize', initStars);
+        initStars(); drawStars();
+
+
+        function typeEffect(element, text, delay = 100) {
+            return new Promise(resolve => {
+                let i = 0;
+                function typing() {
+                    if (i < text.length) {
+                        element.innerHTML += text.charAt(i);
+                        i++;
+                        setTimeout(typing, delay);
+                    } else {
+                        resolve();
+                    }
+                }
+                typing();
+            });
+        }
+
+
+        function fireConfetti() {
+            var duration = 5 * 1000;
+            var animationEnd = Date.now() + duration;
+            var defaults = { startVelocity: 30, spread: 360, ticks: 60, zIndex: 200 };
+
+            function randomInRange(min, max) { return Math.random() * (max - min) + min; }
+
+            var interval = setInterval(function () {
+                var timeLeft = animationEnd - Date.now();
+                if (timeLeft <= 0) return clearInterval(interval);
+
+                var particleCount = 40 * (timeLeft / duration);
+                confetti(Object.assign({}, defaults, {
+                    particleCount,
+                    origin: { x: randomInRange(0.1, 0.3), y: Math.random() - 0.2 },
+                    shapes: ['heart'],
+                    colors: ['#ff0a54', '#ff4d6d', '#ff85a1']
+                }));
+                confetti(Object.assign({}, defaults, {
+                    particleCount,
+                    origin: { x: randomInRange(0.7, 0.9), y: Math.random() - 0.2 },
+                    shapes: ['heart'],
+                    colors: ['#ff0a54', '#ff4d6d', '#ff85a1']
+                }));
+            }, 250);
+        }
+
+
+        const noBtn = document.getElementById('noBtn');
+        const moveNo = () => {
+            const range = 180;
+            const x = (Math.random() - 0.5) * range * 2;
+            const y = (Math.random() - 0.5) * range * 2;
+            noBtn.style.transform = `translate(${x}px, ${y}px)`;
+        };
+        noBtn.addEventListener('mouseover', moveNo);
+        noBtn.addEventListener('touchstart', (e) => { e.preventDefault(); moveNo(); });
+
+
+        document.getElementById('yesBtn').addEventListener('click', () => {
+            const audio = document.getElementById('loveSong');
+            audio.play().catch(() => { });
+
+            document.getElementById('question-box').style.display = 'none';
+            document.getElementById('heart-screen').style.display = 'flex';
+
+
+            fireConfetti();
+
+
+            anime({
+                targets: '.path',
+                strokeDashoffset: [anime.setDashoffset, 0],
+                easing: 'easeInOutExpo',
+                duration: 3000,
+                fill: ['rgba(255, 10, 84, 0)', 'rgba(255, 10, 84, 1)'],
+                complete: async function () {
+
+                    await typeEffect(document.getElementById('msg1'), "I Love You Too! ❤️😍");
+                    await typeEffect(document.getElementById('msg2'), "JOURIFT", 50);
+                    await typeEffect(document.getElementById('msg3'), "FOLLOW FOR MORE", 50);
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
